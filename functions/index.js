@@ -1,5 +1,4 @@
 const functions = require("firebase-functions");
-// const gcs = require("@google-cloud/storage")();
 const tfjs = require("@tensorflow/tfjs-node");
 const canvas = require("canvas");
 const { Canvas, Image, ImageData } = canvas;
@@ -9,76 +8,98 @@ const path = require("path");
 const spawn = require("child-process-promise").spawn;
 const faceapi = require("face-api.js");
 const admin = require("firebase-admin");
-admin.initializeApp();
+const firebase = require("firebase");
+
+const serviceAccount = require("./serviceAccount.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "find-my-face.appspot.com",
+  databaseURL: "https://find-my-face.firebaseio.com"
+});
+
+var firebaseConfig = {
+  apiKey: "AIzaSyCMhyzLJpAt6KmCeEgnT9FV4niLUqaP7fw",
+  authDomain: "find-my-face.firebaseapp.com",
+  databaseURL: "https://find-my-face.firebaseio.com",
+  projectId: "find-my-face",
+  storageBucket: "find-my-face.appspot.com",
+  messagingSenderId: "342095524666",
+  appId: "1:342095524666:web:3de5759e04626187"
+};
+
+firebase.initializeApp(firebaseConfig);
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
 //
 
 faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
-const MODEL_DIR = (require = "./models");
+const MODELS_URL = path.join(__dirname, "./models");
 
-exports.onFileChange = functions.storage.object().onFinalize(async object => {
-  // const object = event.data;
-  const fileBucket = object.bucket;
-  const bucket = admin.storage().bucket(fileBucket);
-  const contentType = object.contentType;
-  const filePath = object.name;
-  console.log("File change detected, function execution started");
-  console.log(object);
+// exports.processSelfie = functions.storage
+//   .object()
+//   .onFinalize(async (object, context) => {
+//     const fileBucket = object.bucket;
+//     const bucket = admin.storage().bucket(fileBucket);
+//     const contentType = object.contentType;
+//     const filePath = object.name;
 
-  if (object.resourceState === "not_exists") {
-    console.log("We deleted a file, exit...");
-    return;
-  }
+//     await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_URL);
+//     await faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_URL);
+//     await faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_URL);
 
-  if (path.basename(filePath).startsWith("resized-")) {
-    console.log("We already renamed that file!");
-    return;
-  }
+//     if (!filePath.startsWith("Users")) {
+//       return console.log("Not an upload from User");
+//     }
 
-  if (!filePath.startsWith("Users")) {
-    return console.log("Not an upload from User");
-  }
+//     let labels = [{ [object.name]: object }];
 
-  const tmpFilePath = path.join(os.tmpdir(), path.basename(filePath));
-  const tmpPhotographerFilePath = path.join(
-    os.tmpdir(),
-    path.basename(`${filePath}/Photographers`)
-  );
-  const metadata = { contentType: contentType };
+//     console.log("This is -___>", labels);
 
-  return bucket
-    .file(filePath)
-    .download({
-      destination: tmpFilePath
-    })
-    .then(() => {
-      //set ^^ to a known const
-      //set photographerfilepath to const unknown
-      return spawn("convert", [tmpFilePath, "-resize", "500x500", tmpFilePath]);
-      //do facial recognition stuff
-      //get selfie --triggered from new add to users known
-      //get the photographers albums unknown
-      //compare... map and compare to the known
-      //a folder of matched photos?
-    })
-    .then(() => {
-      //return the FOLDER of matches images
-      return bucket.upload(tmpFilePath, {
-        destination: "resized-" + path.basename(filePath),
-        metadata: metadata
-      });
-    });
-});
+//     const labeledFaceDescriptors = await Promise.all(
+//       labels.map(async label => {
+//         // fetch image data from urls and convert blob to HTMLImage element
+//         const refImg = await canvas.loadImage(label.mediaLink);
+//         const img = await faceapi.createCanvasFromMedia(refImg);
+//         // console.log("This is the media link", label.mediaLink);
+//         // console.log("Got the image", img);
 
-exports.processSelfie = functions.storage.object().onFinalize(async object => {
-  const fileBucket = object.bucket;
-  const bucket = admin.storage().bucket(fileBucket);
-  const contentType = object.contentType;
-  const filePath = object.name;
+//         // detect the face with the highest score in the image and compute it's landmarks and face descriptor
+//         const fullFaceDescription = await faceapi
+//           .detectSingleFace(img)
+//           .withFaceLandmarks()
+//           .withFaceDescriptor();
+//         console.log("Got descriptions", fullFaceDescription);
 
-  await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODEL_DIR);
-  await faceapi.nets.faceLandmark68Net.loadFromDisk(MODEL_DIR);
-  await faceapi.nets.faceRecognitionNet.loadFromDisk(MODEL_DIR);
-});
+//         // If we dont detect any face we'll show a error.
+//         if (!fullFaceDescription) {
+//           throw new Error(`no faces detected for ${label}`);
+//         }
+
+//         // Returning for the map function data.
+//         return {
+//           descriptor: [fullFaceDescription.descriptor],
+//           label: label.name
+//         };
+//       })
+//     );
+//     // Returning all data maped.
+//     console.log("These are the descriptions", labeledFaceDescriptors);
+
+//     // return labeledFaceDescriptors;
+
+//     const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+
+//     const tempFilePath = path.join(os.tmpdir(), fileName);
+//     await bucket
+//       .file(`/Photographers/Photographer1/dougie.jpg`)
+//       .download({ destination: tempFilePath })
+//       .then(() => {
+//         return bucket.upload(tempFilePath, {
+//           destination: "something" + path.basename("dougie2.jpg")
+//         });
+//       });
+//   });
+
+exports.
