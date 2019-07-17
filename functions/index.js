@@ -1,5 +1,4 @@
 const functions = require("firebase-functions");
-const tfjs = require("@tensorflow/tfjs-node");
 const canvas = require("canvas");
 const { Canvas, Image, ImageData } = canvas;
 const os = require("os");
@@ -31,7 +30,7 @@ var firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-faceapi.env.monkeyPatch({ fetch: fetch });
+faceapi.env.monkeyPatch({ Canvas, Image, ImageData, fetch: fetch });
 const MODELS_URL = path.join(__dirname, "./models");
 
 exports.testRecognition = functions.storage
@@ -57,9 +56,9 @@ exports.testRecognition = functions.storage
     }
 
     Promise.all([
-      await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_URL),
-      await faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_URL),
-      await faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_URL)
+      faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_URL),
+      faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_URL),
+      faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_URL)
     ]).then(start);
 
     function loadLabeledImage() {
@@ -67,9 +66,12 @@ exports.testRecognition = functions.storage
       return Promise.all(
         faceLabel.map(async label => {
           const descriptions = [];
-          const img = await faceapi.fetchImage(object.mediaLink);
+          // const img = object.mediaLink;
+          // const canvas = await faceapi.createCanvasFromMedia(img);
+          const blob = new Blob();
+          const image = await faceapi.bufferToImage(blob);
           const detections = await faceapi
-            .detectSingleFace(img)
+            .detectSingleFace(canvas)
             .withFaceLandmarks()
             .withFaceDescriptor();
           descriptions.push(detections.descriptor);
@@ -82,10 +84,10 @@ exports.testRecognition = functions.storage
     async function start() {
       const labeledFaceDescriptor = await loadLabeledImage();
       const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptor, 0.6);
-      img = await faceapi.fetchImage(object.mediaLink);
-      canvas = faceapi.createCanvasFromMedia(img);
+      const img = object.mediaLink;
+      const canvas = await faceapi.createCanvasFromMedia(img);
       const detections = await faceapi
-        .detectAllFaces(img)
+        .detectAllFaces(canvas)
         .withFaceLandmarks()
         .withFaceDescriptor();
       const results = detections.map(d => {
