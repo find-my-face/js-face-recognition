@@ -67,9 +67,9 @@ exports.testRecognition = functions.storage
         faceLabel.map(async label => {
           const descriptions = [];
           // const img = object.mediaLink;
-          // const canvas = await faceapi.createCanvasFromMedia(img);
-          const blob = new Blob();
-          const image = await faceapi.bufferToImage(blob);
+          // const canvas = await faceapi.createCanvasFromMedia(img);//problem
+          // const blob = new Blob(); //problem
+          const image = await faceapi.bufferToImage(object.mediaLink); //problem
           const detections = await faceapi
             .detectSingleFace(canvas)
             .withFaceLandmarks()
@@ -85,7 +85,7 @@ exports.testRecognition = functions.storage
       const labeledFaceDescriptor = await loadLabeledImage();
       const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptor, 0.6);
       const img = object.mediaLink;
-      const canvas = await faceapi.createCanvasFromMedia(img);
+      const canvas = await faceapi.createCanvasFromMedia(img); //needs correct image
       const detections = await faceapi
         .detectAllFaces(canvas)
         .withFaceLandmarks()
